@@ -47,6 +47,9 @@ class Unzip {
 	// ignore these directories (useless meta data)
 	private $_skip_dirs = array('__MACOSX');
 
+	// Rename target files with underscore case
+	private $underscore_case = TRUE;
+	
 	private $_allow_extensions = NULL; // What is allowed out of the zip
 
 	// --------------------------------------------------------------------
@@ -87,7 +90,7 @@ class Unzip {
 		foreach ($files as $file => $trash)
 		{
 			$dirname = pathinfo($file, PATHINFO_DIRNAME);
-			$extension = pathinfo($file, PATHINFO_EXTENSION);
+			$extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
 
 			$folders = explode('/', $dirname);
 			$out_dn = $this->_target_dir . '/' . $dirname;
@@ -133,7 +136,7 @@ class Unzip {
 
 			$file_locations[] = $file_location = $this->_target_dir . '/' . ($preserve_filepath ? $file : basename($file));
 
-			$this->_extract_file($file, $file_location);
+			$this->_extract_file($file, $file_location, $this->underscore_case);
 		}
 
 		return $file_locations;
@@ -260,10 +263,10 @@ class Unzip {
 	 * Unzip file in archive.
 	 *
 	 * @access    Public
-	 * @param     string, boolean
+	 * @param     string, boolean, boolean
 	 * @return    Unziped file.
 	 */
-	private function _extract_file($compressed_file_name, $target_file_name = FALSE)
+	private function _extract_file($compressed_file_name, $target_file_name = FALSE, $underscore_case = FALSE)
 	{
 		if ( ! sizeof($this->compressed_list))
 		{
@@ -292,6 +295,13 @@ class Unzip {
 			return $target_file_name ? file_put_contents($target_file_name, '') : '';
 		}
 
+		if($underscore_case)
+		{
+			$pathinfo 	= pathinfo($target_file_name);
+			$pathinfo['filename_new'] = preg_replace('/([^.a-z0-9]+)/i', '_',strtolower($pathinfo['filename']));
+			$target_file_name = $pathinfo['dirname'].'/'.$pathinfo['filename_new'].'.'.strtolower($pathinfo['extension']);
+		}
+		
 		fseek($this->fh, $fdetails['contents_start_offset']);
 		$ret = $this->_uncompress(
 			fread($this->fh, $fdetails['compressed_size']),
